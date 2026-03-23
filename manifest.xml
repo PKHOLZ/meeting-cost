@@ -12,7 +12,7 @@
     ║  Replace every instance of YOURNAME below with your         ║
     ║  actual GitHub username. For example, if your username      ║
     ║  is "jesallersted", replace:                                ║
-    ║    YOURNAME.github.io  →  jesallersted.github.io            ║
+    ║    PKHOLZ.github.io  →  jesallersted.github.io            ║
     ╚══════════════════════════════════════════════════════════════╝
   -->
 
@@ -23,12 +23,12 @@
   <DisplayName DefaultValue="Meeting Cost Calculator"/>
   <Description DefaultValue="Shows the estimated cost of a meeting before you send the invite."/>
 
-  <IconUrl DefaultValue="https://YOURNAME.github.io/meeting-cost/assets/icon-64.png"/>
-  <HighResolutionIconUrl DefaultValue="https://YOURNAME.github.io/meeting-cost/assets/icon-128.png"/>
-  <SupportUrl DefaultValue="https://YOURNAME.github.io/meeting-cost/"/>
+  <IconUrl DefaultValue="https://PKHOLZ.github.io/meeting-cost/assets/icon-64.png"/>
+  <HighResolutionIconUrl DefaultValue="https://PKHOLZ.github.io/meeting-cost/assets/icon-128.png"/>
+  <SupportUrl DefaultValue="https://PKHOLZ.github.io/meeting-cost/"/>
 
   <AppDomains>
-    <AppDomain>https://YOURNAME.github.io</AppDomain>
+    <AppDomain>https://PKHOLZ.github.io</AppDomain>
   </AppDomains>
 
   <Hosts>
@@ -44,7 +44,7 @@
   <FormSettings>
     <Form xsi:type="ItemEdit">
       <DesktopSettings>
-        <SourceLocation DefaultValue="https://YOURNAME.github.io/meeting-cost/taskpane.html"/>
+        <SourceLocation DefaultValue="https://PKHOLZ.github.io/meeting-cost/taskpane.html"/>
         <RequestedHeight>450</RequestedHeight>
       </DesktopSettings>
     </Form>
@@ -93,12 +93,12 @@
 
     <Resources>
       <bt:Images>
-        <bt:Image id="Icon16" DefaultValue="https://YOURNAME.github.io/meeting-cost/assets/icon-16.png"/>
-        <bt:Image id="Icon32" DefaultValue="https://YOURNAME.github.io/meeting-cost/assets/icon-32.png"/>
-        <bt:Image id="Icon80" DefaultValue="https://YOURNAME.github.io/meeting-cost/assets/icon-80.png"/>
+        <bt:Image id="Icon16" DefaultValue="https://PKHOLZ.github.io/meeting-cost/assets/icon-16.png"/>
+        <bt:Image id="Icon32" DefaultValue="https://PKHOLZ.github.io/meeting-cost/assets/icon-32.png"/>
+        <bt:Image id="Icon80" DefaultValue="https://PKHOLZ.github.io/meeting-cost/assets/icon-80.png"/>
       </bt:Images>
       <bt:Urls>
-        <bt:Url id="TaskpaneUrl" DefaultValue="https://YOURNAME.github.io/meeting-cost/taskpane.html"/>
+        <bt:Url id="TaskpaneUrl" DefaultValue="https://PKHOLZ.github.io/meeting-cost/taskpane.html"/>
       </bt:Urls>
       <bt:ShortStrings>
         <bt:String id="GroupLabel" DefaultValue="Meeting Cost"/>
