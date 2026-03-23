@@ -6,29 +6,19 @@
   xmlns:mailappor="http://schemas.microsoft.com/office/mailappversionoverrides/1.0"
   xsi:type="MailApp">
 
-  <!--
-    ╔══════════════════════════════════════════════════════════════╗
-    ║  INSTRUCTIONS:                                              ║
-    ║  Replace every instance of YOURNAME below with your         ║
-    ║  actual GitHub username. For example, if your username      ║
-    ║  is "jesallersted", replace:                                ║
-    ║    PKHOLZ.github.io  →  jesallersted.github.io            ║
-    ╚══════════════════════════════════════════════════════════════╝
-  -->
-
   <Id>b2c3d4e5-f6a7-8901-bcde-f12345678901</Id>
   <Version>2.0.0.0</Version>
-  <ProviderName>Your Company</ProviderName>
+  <ProviderName>Context&amp;</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="Meeting Cost Calculator"/>
-  <Description DefaultValue="Shows the estimated cost of a meeting before you send the invite."/>
+  <Description DefaultValue="Shows the estimated cost of a meeting as an inline notification bar. Helps your team be intentional about who they invite and how long they meet."/>
 
-  <IconUrl DefaultValue="https://PKHOLZ.github.io/meeting-cost/assets/icon-64.png"/>
-  <HighResolutionIconUrl DefaultValue="https://PKHOLZ.github.io/meeting-cost/assets/icon-128.png"/>
-  <SupportUrl DefaultValue="https://PKHOLZ.github.io/meeting-cost/"/>
+  <IconUrl DefaultValue="https://pkholz.github.io/meeting-cost/assets/icon-64.png"/>
+  <HighResolutionIconUrl DefaultValue="https://pkholz.github.io/meeting-cost/assets/icon-128.png"/>
+  <SupportUrl DefaultValue="https://pkholz.github.io/meeting-cost/"/>
 
   <AppDomains>
-    <AppDomain>https://PKHOLZ.github.io</AppDomain>
+    <AppDomain>https://pkholz.github.io</AppDomain>
   </AppDomains>
 
   <Hosts>
@@ -37,15 +27,15 @@
 
   <Requirements>
     <Sets>
-      <Set Name="Mailbox" MinVersion="1.3"/>
+      <Set Name="Mailbox" MinVersion="1.13"/>
     </Sets>
   </Requirements>
 
   <FormSettings>
     <Form xsi:type="ItemEdit">
       <DesktopSettings>
-        <SourceLocation DefaultValue="https://PKHOLZ.github.io/meeting-cost/taskpane.html"/>
-        <RequestedHeight>450</RequestedHeight>
+        <SourceLocation DefaultValue="https://pkholz.github.io/meeting-cost/taskpane.html"/>
+        <RequestedHeight>250</RequestedHeight>
       </DesktopSettings>
     </Form>
   </FormSettings>
@@ -55,9 +45,10 @@
     <Rule xsi:type="ItemIs" ItemType="Appointment" FormType="Edit"/>
   </Rule>
 
+  <!-- VersionOverrides v1.0 -->
   <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides" xsi:type="VersionOverridesV1_0">
     <Requirements>
-      <bt:Sets DefaultMinVersion="1.3">
+      <bt:Sets DefaultMinVersion="1.13">
         <bt:Set Name="Mailbox"/>
       </bt:Sets>
     </Requirements>
@@ -65,11 +56,13 @@
     <Hosts>
       <Host xsi:type="MailHost">
         <DesktopFormFactor>
+
+          <!-- Ribbon button: opens detailed breakdown in task pane -->
           <ExtensionPoint xsi:type="AppointmentOrganizerCommandSurface">
             <OfficeTab id="TabDefault">
               <Group id="meetingCostGroup">
                 <Label resid="GroupLabel"/>
-                <Control xsi:type="Button" id="showCostBtn">
+                <Control xsi:type="Button" id="showDetailBtn">
                   <Label resid="BtnLabel"/>
                   <Supertip>
                     <Title resid="BtnLabel"/>
@@ -87,23 +80,35 @@
               </Group>
             </OfficeTab>
           </ExtensionPoint>
+
+          <!-- Event-based activation: auto-runs when composing a meeting -->
+          <ExtensionPoint xsi:type="LaunchEvent">
+            <LaunchEvents>
+              <LaunchEvent Type="OnAppointmentComposeOpen" FunctionName="onAppointmentComposeOpen"/>
+              <LaunchEvent Type="OnAppointmentRecipientsChanged" FunctionName="onRecipientsChanged"/>
+              <LaunchEvent Type="OnAppointmentTimeChanged" FunctionName="onTimeChanged"/>
+            </LaunchEvents>
+            <SourceLocation resid="AutorunUrl"/>
+          </ExtensionPoint>
+
         </DesktopFormFactor>
       </Host>
     </Hosts>
 
     <Resources>
       <bt:Images>
-        <bt:Image id="Icon16" DefaultValue="https://PKHOLZ.github.io/meeting-cost/assets/icon-16.png"/>
-        <bt:Image id="Icon32" DefaultValue="https://PKHOLZ.github.io/meeting-cost/assets/icon-32.png"/>
-        <bt:Image id="Icon80" DefaultValue="https://PKHOLZ.github.io/meeting-cost/assets/icon-80.png"/>
+        <bt:Image id="Icon16" DefaultValue="https://pkholz.github.io/meeting-cost/assets/icon-16.png"/>
+        <bt:Image id="Icon32" DefaultValue="https://pkholz.github.io/meeting-cost/assets/icon-32.png"/>
+        <bt:Image id="Icon80" DefaultValue="https://pkholz.github.io/meeting-cost/assets/icon-80.png"/>
       </bt:Images>
       <bt:Urls>
-        <bt:Url id="TaskpaneUrl" DefaultValue="https://PKHOLZ.github.io/meeting-cost/taskpane.html"/>
+        <bt:Url id="TaskpaneUrl" DefaultValue="https://pkholz.github.io/meeting-cost/taskpane.html"/>
+        <bt:Url id="AutorunUrl" DefaultValue="https://pkholz.github.io/meeting-cost/src/autorun.html"/>
       </bt:Urls>
       <bt:ShortStrings>
         <bt:String id="GroupLabel" DefaultValue="Meeting Cost"/>
-        <bt:String id="BtnLabel" DefaultValue="Meeting Cost"/>
-        <bt:String id="BtnDesc" DefaultValue="See the estimated cost of this meeting"/>
+        <bt:String id="BtnLabel" DefaultValue="Cost Breakdown"/>
+        <bt:String id="BtnDesc" DefaultValue="Open a detailed cost breakdown for this meeting"/>
       </bt:ShortStrings>
     </Resources>
   </VersionOverrides>
