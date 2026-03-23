@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Meeting Cost — Breakdown</title>
+  <script src="https://appsforoffice.microsoft.com/lib/1.1/hosted/office.js"></script>
+  <script src="src/config.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', -apple-system, sans-serif;
+      background: #f5f5f5;
+      color: #1a1a1a;
+      padding: 16px;
+      line-height: 1.5;
+    }
+    @media (prefers-color-scheme: dark) {
+      body { background: #1a1a1a; color: #e5e5e5; }
+      .card { background: #252525 !important; border-color: #333 !important; }
+      .label { color: #999 !important; }
+      .breakdown-row { border-color: #333 !important; }
+      .rate-input { background: #1a1a1a !important; border-color: #444 !important; color: #e5e5e5 !important; }
+    }
+
+    .header { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+    .header-icon {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: #FFF3E0; display: grid; place-items: center; font-size: 15px;
+    }
+    .header h1 { font-size: 15px; font-weight: 600; }
+    .header p { font-size: 11px; color: #888; }
+
+    .card {
+      background: #fff;
+      border: 1px solid #e5e5e5;
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+
+    .cost-display { text-align: center; }
+    .label {
+      font-size: 10px; text-transform: uppercase;
+      letter-spacing: 0.06em; color: #888; margin-bottom: 4px;
+    }
+    .cost-value {
+      font-size: 36px; font-weight: 700;
+      letter-spacing: -0.02em; font-variant-numeric: tabular-nums;
+    }
+    .cost-value.ok { color: #16a34a; }
+    .cost-value.warn { color: #d97706; }
+    .cost-value.crit { color: #dc2626; }
+    .cost-sub { font-size: 12px; color: #888; margin-top: 2px; }
+
+    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+    .stat { text-align: center; }
+    .stat .value { font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+    .breakdown-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 5px 0; font-size: 13px;
+    }
+    .breakdown-row + .breakdown-row { border-top: 1px solid #eee; }
+    .breakdown-row .val { font-weight: 600; font-variant-numeric: tabular-nums; }
+    .breakdown-row .dim { font-size: 11px; color: #888; }
+
+    .gauge-track {
+      height: 5px; background: #e5e5e5; border-radius: 3px; overflow: hidden; margin-top: 8px;
+    }
+    .gauge-fill {
+      height: 100%; border-radius: 3px;
+      transition: width 0.4s ease, background 0.3s;
+    }
+    .gauge-fill.ok { background: #16a34a; }
+    .gauge-fill.warn { background: #d97706; }
+    .gauge-fill.crit { background: #dc2626; }
+    .gauge-labels {
+      display: flex; justify-content: space-between;
+      font-size: 10px; color: #999; margin-top: 4px;
+    }
+
+    .rate-section { margin-top: 4px; }
+    .rate-row { display: flex; align-items: center; gap: 8px; }
+    .rate-input {
+      flex: 1; background: #f5f5f5; border: 1px solid #ddd; border-radius: 8px;
+      color: #1a1a1a; font-size: 15px; font-weight: 600; padding: 7px 10px;
+      font-family: inherit; outline: none; font-variant-numeric: tabular-nums;
+    }
+    .rate-input:focus { border-color: #5B5FC7; }
+    .rate-unit { font-size: 12px; color: #888; white-space: nowrap; }
+
+    .status-msg { text-align: center; padding: 30px 16px; color: #888; font-size: 13px; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    .fade { animation: fadeIn 0.3s ease both; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-icon">💰</div>
+    <div>
+      <h1>Meeting Cost</h1>
+      <p>Detailed breakdown</p>
+    </div>
+  </div>
+  <div id="app">
+    <div class="status-msg">Connecting to Outlook…</div>
+  </div>
+
+  <script>
+    var state = { attendees: 0, durationMin: 0, rate: CONFIG.averageHourlyRate, ready: false };
+
+    function fmt(val) {
+      return new Intl.NumberFormat(CONFIG.locale, {
+        style: "currency", currency: CONFIG.currencyCode,
+        minimumFractionDigits: 0, maximumFractionDigits: 0,
+      }).format(val);
+    }
+    function fmtDur(min) {
+      if (min < 60) return min + "m";
+      var h = Math.floor(min / 60), m = min % 60;
+      return m > 0 ? h + "h " + m + "m" : h + "h";
+    }
+
+    function render() {
+      var app = document.getElementById("app");
+      if (!state.ready) { app.innerHTML = '<div class="status-msg">Connecting to Outlook…</div>'; return; }
+      if (state.attendees === 0 && state.durationMin === 0) {
+        app.innerHTML = '<div class="status-msg fade">Add attendees and set a time to see the cost.</div>' + rateHTML();
+        bindRate();
+        return;
+      }
+
+      var cost = state.rate * (state.durationMin / 60) * state.attendees;
+      var pp = state.attendees > 0 ? Math.round(cost / state.attendees) : 0;
+      var cls = cost >= CONFIG.criticalThreshold ? "crit" : cost >= CONFIG.warningThreshold ? "warn" : "ok";
+      var pct = Math.min((cost / CONFIG.criticalThreshold) * 100, 100);
+
+      app.innerHTML =
+        '<div class="card cost-display fade">' +
+          '<div class="label">Estimated meeting cost</div>' +
+          '<div class="cost-value ' + cls + '">' + fmt(cost) + '</div>' +
+          '<div class="cost-sub">' + fmt(pp) + ' per person</div>' +
+        '</div>' +
+        '<div class="stats">' +
+          '<div class="card stat fade"><div class="label">Attendees</div><div class="value">' + state.attendees + '</div></div>' +
+          '<div class="card stat fade"><div class="label">Duration</div><div class="value">' + fmtDur(state.durationMin) + '</div></div>' +
+        '</div>' +
+        '<div class="card fade">' +
+          '<div class="label" style="margin-bottom:8px">Breakdown</div>' +
+          '<div class="breakdown-row"><span>Hourly rate</span><span class="val">' + fmt(state.rate) + '</span></div>' +
+          '<div class="breakdown-row"><span>Duration</span><span class="val">' + fmtDur(state.durationMin) + '</span></div>' +
+          '<div class="breakdown-row"><span>Attendees</span><span class="val">' + state.attendees + '</span></div>' +
+          '<div class="breakdown-row"><span>Formula</span><span class="dim">' + fmt(state.rate) + ' × ' + (state.durationMin / 60).toFixed(2) + 'h × ' + state.attendees + '</span></div>' +
+        '</div>' +
+        '<div class="card fade">' +
+          '<div class="label">Cost gauge</div>' +
+          '<div class="gauge-track"><div class="gauge-fill ' + cls + '" style="width:' + pct + '%"></div></div>' +
+          '<div class="gauge-labels"><span>' + fmt(0) + '</span><span>' + fmt(CONFIG.criticalThreshold) + '</span></div>' +
+        '</div>' +
+        rateHTML();
+
+      bindRate();
+    }
+
+    function rateHTML() {
+      return '<div class="card rate-section fade">' +
+        '<div class="label" style="margin-bottom:8px">Average hourly rate</div>' +
+        '<div class="rate-row">' +
+          '<input type="number" class="rate-input" id="rateInput" value="' + state.rate + '" min="1" step="5" />' +
+          '<span class="rate-unit">' + CONFIG.currency + ' / hour</span>' +
+        '</div></div>';
+    }
+
+    function bindRate() {
+      var el = document.getElementById("rateInput");
+      if (!el) return;
+      el.addEventListener("input", function (e) {
+        var v = parseFloat(e.target.value);
+        if (!isNaN(v) && v > 0) { state.rate = v; render(); var n = document.getElementById("rateInput"); if (n) { n.focus(); n.value = v; } }
+      });
+    }
+
+    function readAndRender() {
+      var item = Office.context.mailbox.item;
+      if (!item) return;
+      item.requiredAttendees.getAsync(function (r1) {
+        var req = (r1.status === Office.AsyncResultStatus.Succeeded && r1.value) ? r1.value.length : 0;
+        item.optionalAttendees.getAsync(function (r2) {
+          var opt = (r2.status === Office.AsyncResultStatus.Succeeded && r2.value) ? r2.value.length : 0;
+          item.start.getAsync(function (r3) {
+            item.end.getAsync(function (r4) {
+              state.attendees = req + opt;
+              if (r3.status === Office.AsyncResultStatus.Succeeded && r4.status === Office.AsyncResultStatus.Succeeded) {
+                state.durationMin = Math.max(0, Math.round((new Date(r4.value) - new Date(r3.value)) / 60000));
+              }
+              render();
+            });
+          });
+        });
+      });
+    }
+
+    Office.onReady(function (info) {
+      if (info.host === Office.HostType.Outlook) {
+        state.ready = true;
+        readAndRender();
+        setInterval(readAndRender, 2000);
+      }
+    });
+  </script>
+</body>
+</html>

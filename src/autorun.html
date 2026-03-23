@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <script src="https://appsforoffice.microsoft.com/lib/1.1/hosted/office.js"></script>
+  <script src="config.js"></script>
+  <script>
+    // ── Helpers ────────────────────────────────────
+    function fmtCurrency(val) {
+      return new Intl.NumberFormat(CONFIG.locale, {
+        style: "currency",
+        currency: CONFIG.currencyCode,
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(val);
+    }
+
+    function fmtDuration(minutes) {
+      if (minutes < 60) return minutes + "m";
+      var h = Math.floor(minutes / 60);
+      var m = minutes % 60;
+      return m > 0 ? h + "h " + m + "m" : h + "h";
+    }
+
+    // ── Core: read meeting data and show notification ──
+    function updateCostNotification() {
+      var item = Office.context.mailbox.item;
+      if (!item) return;
+
+      // Read all meeting details in sequence
+      item.requiredAttendees.getAsync(function (reqResult) {
+        var reqCount = 0;
+        if (reqResult.status === Office.AsyncResultStatus.Succeeded && reqResult.value) {
+          reqCount = reqResult.value.length;
+        }
+
+        item.optionalAttendees.getAsync(function (optResult) {
+          var optCount = 0;
+          if (optResult.status === Office.AsyncResultStatus.Succeeded && optResult.value) {
+            optCount = optResult.value.length;
+          }
+
+          item.start.getAsync(function (startResult) {
+            item.end.getAsync(function (endResult) {
+              var totalAttendees = reqCount + optCount;
+              var durationMin = 0;
+
+              if (
+                startResult.status === Office.AsyncResultStatus.Succeeded &&
+                endResult.status === Office.AsyncResultStatus.Succeeded
+              ) {
+                var startTime = new Date(startResult.value);
+                var endTime = new Date(endResult.value);
+                durationMin = Math.max(0, Math.round((endTime - startTime) / 60000));
+              }
+
+              var durationHours = durationMin / 60;
+              var cost = CONFIG.averageHourlyRate * durationHours * totalAttendees;
+
+              // Build the notification message
+              var message = "";
+              var icon = "cost-info";
+
+              if (totalAttendees === 0 || durationMin === 0) {
+                message =
+                  "💰 Meeting cost: Add attendees and set a time to see the estimate.";
+              } else {
+                var costStr = fmtCurrency(cost);
+                var perPerson = fmtCurrency(
+                  totalAttendees > 0 ? Math.round(cost / totalAttendees) : 0
+                );
+                var durStr = fmtDuration(durationMin);
+
+                message =
+                  "💰 Estimated meeting cost: " +
+                  costStr +
+                  "  ·  " +
+                  totalAttendees +
+                  " attendees × " +
+                  durStr +
+                  " × " +
+                  fmtCurrency(CONFIG.averageHourlyRate) +
+                  "/hr" +
+                  "  ·  " +
+                  perPerson +
+                  " per person";
+
+                // Choose icon based on thresholds
+                if (cost >= CONFIG.criticalThreshold) {
+                  icon = "cost-critical";
+                } else if (cost >= CONFIG.warningThreshold) {
+                  icon = "cost-warning";
+                }
+              }
+
+              // Show as an informational notification bar
+              // (This appears as a slim bar at the top of the compose form)
+              var notificationKey = "meetingCostBar";
+
+              // Remove previous notification first, then set new one
+              item.notificationMessages.replaceAsync(
+                notificationKey,
+                {
+                  type: Office.MailboxEnums.ItemNotificationMessageType.InformationalMessage,
+                  message: message,
+                  icon: "icon-16",
+                  persistent: true,
+                },
+                function (result) {
+                  if (result.status !== Office.AsyncResultStatus.Succeeded) {
+                    // If replace fails (first time), try add
+                    item.notificationMessages.addAsync(notificationKey, {
+                      type: Office.MailboxEnums.ItemNotificationMessageType.InformationalMessage,
+                      message: message,
+                      icon: "icon-16",
+                      persistent: true,
+                    });
+                  }
+                }
+              );
+            });
+          });
+        });
+      });
+    }
+
+    // ── Event handlers (called by LaunchEvent manifest entries) ──
+
+    // Fires when the meeting compose form opens
+    function onAppointmentComposeOpen(event) {
+      updateCostNotification();
+      event.completed();
+    }
+
+    // Fires when attendees are added or removed
+    function onRecipientsChanged(event) {
+      updateCostNotification();
+      event.completed();
+    }
+
+    // Fires when the meeting start or end time changes
+    function onTimeChanged(event) {
+      updateCostNotification();
+      event.completed();
+    }
+
+    // ── Register event handlers with Office.js ──
+    Office.actions.associate("onAppointmentComposeOpen", onAppointmentComposeOpen);
+    Office.actions.associate("onRecipientsChanged", onRecipientsChanged);
+    Office.actions.associate("onTimeChanged", onTimeChanged);
+  </script>
+</head>
+<body>
+</body>
+</html>
